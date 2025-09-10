@@ -1,0 +1,104 @@
+from collections import deque
+
+def input_puzzle(prompt):
+    print(prompt)
+    puzzle = []
+    for _ in range(3):
+        row = list(map(int, input().strip().split()))
+        puzzle.append(row)
+    return tuple(tuple(row) for row in puzzle)  # Use tuple of tuples for immutability and hashing
+
+def find_blank(state):
+    for i in range(3):
+        for j in range(3):
+            if state[i][j] == 0:
+                return i, j
+
+def get_neighbors(state):
+    neighbors = []
+    x, y = find_blank(state)
+    directions = [(1,0), (-1,0), (0,1), (0,-1)]
+   
+    for dx, dy in directions:
+        nx, ny = x + dx, y + dy
+        if 0 <= nx < 3 and 0 <= ny < 3:
+            new_state = [list(row) for row in state]
+            # Swap blank with neighbor
+            new_state[x][y], new_state[nx][ny] = new_state[nx][ny], new_state[x][y]
+            neighbors.append(tuple(tuple(row) for row in new_state))
+    return neighbors
+
+def manhattan_distance(state, goal):
+    distance = 0
+    position = {}
+    for i in range(3):
+        for j in range(3):
+            position[goal[i][j]] = (i,j)
+    for i in range(3):
+        for j in range(3):
+            val = state[i][j]
+            if val != 0:
+                goal_x, goal_y = position[val]
+                distance += abs(i - goal_x) + abs(j - goal_y)
+    return distance
+
+def reconstruct_path(parent, current):
+    path = deque()
+    while current in parent:
+        path.appendleft(current)
+        current = parent[current]
+    path.appendleft(current)
+    return list(path)
+
+def a_star_8_puzzle(start, goal):
+    open_list = set([start])
+    closed_list = set()
+   
+    g = {start: 0}
+    f = {start: manhattan_distance(start, goal)}
+   
+    parent = {}
+   
+    while open_list:
+        current = min(open_list, key=lambda x: f.get(x, float('inf')))
+       
+        if current == goal:
+            return reconstruct_path(parent, current)
+       
+        open_list.remove(current)
+        closed_list.add(current)
+       
+        for neighbor in get_neighbors(current):
+            if neighbor in closed_list:
+                continue
+           
+            tentative_g = g[current] + 1
+           
+            if neighbor not in open_list or tentative_g < g.get(neighbor, float('inf')):
+                parent[neighbor] = current
+                g[neighbor] = tentative_g
+                f[neighbor] = tentative_g + manhattan_distance(neighbor, goal)
+                open_list.add(neighbor)
+   
+    return None
+
+def print_puzzle(state):
+    for row in state:
+        print(' '.join(str(x) for x in row))
+    print()
+
+def main():
+    start = input_puzzle("Enter the start state (3 rows, 3 numbers each, 0 for blank):")
+    goal = input_puzzle("Enter the goal state (3 rows, 3 numbers each, 0 for blank):")
+   
+    path = a_star_8_puzzle(start, goal)
+   
+    if path is None:
+        print("No solution found")
+    else:
+        print(f"Solution found in {len(path)-1} moves:")
+        for step in path:
+            print_puzzle(step)
+
+if __name__ == "__main__":
+    main()
